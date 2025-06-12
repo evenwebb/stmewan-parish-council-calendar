@@ -1,20 +1,36 @@
 import re
 import datetime
+import requests
 from bs4 import BeautifulSoup
 
+MEETING_TYPES = [
+    {
+        "name": "Full Council",
+        "url": "https://www.stmewanparishcouncil.gov.uk/Full_Council_24620.aspx",
+        "base_url": "https://www.stmewanparishcouncil.gov.uk"
+    },
+    {
+        "name": "Planning",
+        "url": "https://www.stmewanparishcouncil.gov.uk/Planning_24621.aspx",
+        "base_url": "https://www.stmewanparishcouncil.gov.uk"
+    }
+]
+
 def parse_event_date(date_str):
-    # e.g. '8 Jan 25' -> 2025-01-08
-    day, month, year = re.match(r'(\d{1,2}) (\w{3}) (\d{2})', date_str).groups()
+    # Example: '8 Jan 25' → 2025-01-08
+    match = re.match(r'(\d{1,2}) (\w{3}) (\d{2})', date_str)
+    if not match:
+        return None
+    day, month, year = match.groups()
     month_number = datetime.datetime.strptime(month, "%b").month
     year_full = 2000 + int(year)
     return datetime.date(year_full, month_number, int(day))
 
 def parse_time_range(time_str):
-    # '19:00 to 21:00' -> ('19:00', '21:00')
+    # Example: '19:00 to 21:00' → (19:00, 21:00), or '18:00' → (18:00, None)
     match = re.match(r'(\d{1,2}:\d{2}) to (\d{1,2}:\d{2})', time_str)
     if match:
         return match.group(1), match.group(2)
-    # Sometimes time is just one time (start), e.g. '18:00'
     match = re.match(r'(\d{1,2}:\d{2})', time_str)
     if match:
         return match.group(1), None
@@ -30,9 +46,7 @@ def make_ics_event(dtstart, dtend, summary, description=""):
         "END:VEVENT\n"
     )
 
-def extract_events(filename, meeting_type, base_url):
-    with open(filename, "r", encoding="utf-8") as f:
-        html = f.read()
+def extract_events_from_html(html, meeting_type, base_url):
     soup = BeautifulSoup(html, "html.parser")
     today = datetime.date.today()
     ics_events = []
@@ -41,14 +55,10 @@ def extract_events(filename, meeting_type, base_url):
         h4 = minutes_div.find("h4")
         if not h4: continue
         date_str = h4.get_text(strip=True)
-        try:
-            event_date = parse_event_date(date_str)
-        except Exception:
-            continue
-        if event_date < today:
+        event_date = parse_event_date(date_str)
+        if not event_date or event_date < today:
             continue
 
-        # Time: handle possible multiple <p> tags (first is time, next are agenda/minutes)
         p_tags = minutes_div.find_all("p")
         if len(p_tags) == 0:
             continue
@@ -57,18 +67,20 @@ def extract_events(filename, meeting_type, base_url):
         if not start_time_str:
             continue
 
-        # Title: e.g. "Full Council Meeting" or "Planning Meeting"
         summary = f"{meeting_type} Meeting"
 
-        # Links to Agenda/Minutes
         description = ""
         for a in minutes_div.find_all("a"):
-            if "Agenda" in a.get_text():
-                description += f"Agenda: {base_url}{a['href']}\n"
-            if "Minutes" in a.get_text():
-                description += f"Minutes: {base_url}{a['href']}\n"
+            link_text = a.get_text()
+            link_url = a.get("href")
+            if not link_url: continue
+            if not link_url.startswith("http"):
+                link_url = base_url + link_url
+            if "Agenda" in link_text:
+                description += f"Agenda: {link_url}\n"
+            if "Minutes" in link_text:
+                description += f"Minutes: {link_url}\n"
 
-        # Combine date and time
         try:
             start_dt = datetime.datetime.strptime(f"{event_date} {start_time_str}", "%Y-%m-%d %H:%M")
         except Exception:
@@ -85,31 +97,31 @@ def extract_events(filename, meeting_type, base_url):
 
     return ics_events
 
-# Scrape both meetings
-full_council_events = extract_events(
-    "Full Council - St Mewan Parish Council.html",
-    "Full Council",
-    "https://www.stmewanparishcouncil.gov.uk"
-)
-planning_events = extract_events(
-    "Planning - St Mewan Parish Council.html",
-    "Planning",
-    "https://www.stmewanparishcouncil.gov.uk"
-)
+def main():
+    all_events = []
 
-ical_content = (
-    "BEGIN:VCALENDAR\n"
-    "VERSION:2.0\n"
-    "PRODID:-//St Mewan Parish Council//EN\n"
-    "CALSCALE:GREGORIAN\n"
-    "METHOD:PUBLISH\n"
-    "X-WR-TIMEZONE:Europe/London\n"
-    + "".join(full_council_events)
-    + "".join(planning_events)
-    + "END:VCALENDAR\n"
-)
+    for meeting in MEETING_TYPES:
+        print(f"Fetching {meeting['name']} page...")
+        response = requests.get(meeting["url"], timeout=20)
+        response.raise_for_status()
+        events = extract_events_from_html(response.text, meeting["name"], meeting["base_url"])
+        all_events.extend(events)
 
-with open("st_mewan_combined.ics", "w", encoding="utf-8") as f:
-    f.write(ical_content)
+    ical_content = (
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "PRODID:-//St Mewan Parish Council//EN\n"
+        "CALSCALE:GREGORIAN\n"
+        "METHOD:PUBLISH\n"
+        "X-WR-TIMEZONE:Europe/London\n"
+        + "".join(all_events)
+        + "END:VCALENDAR\n"
+    )
 
-print("Combined iCal file created: st_mewan_combined.ics")
+    with open("stmewan.ics", "w", encoding="utf-8") as f:
+        f.write(ical_content)
+
+    print("Created stmewan.ics with all upcoming meetings.")
+
+if __name__ == "__main__":
+    main()
