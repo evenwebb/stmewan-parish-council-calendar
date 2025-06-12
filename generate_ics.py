@@ -67,7 +67,7 @@ def extract_events_from_html(html, meeting_type, base_url):
         if not start_time_str:
             continue
 
-        summary = f"{meeting_type} Meeting"
+        summary = f"St Mewan Parish - {meeting_type} Meeting"
 
         description = ""
         for a in minutes_div.find_all("a"):
