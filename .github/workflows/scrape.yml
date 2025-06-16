@@ -2,7 +2,7 @@ name: Update iCal Feed
 
 on:
   schedule:
-    - cron: '0 6 * * *'    # Every day at 6:00 UTC (change as desired)
+    - cron: '0 11 * * *'    # Every day at 11:00 UTC (change as desired)
   workflow_dispatch:        # Allows you to trigger manually from GitHub UI
 
 jobs:
