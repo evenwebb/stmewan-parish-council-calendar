@@ -13,6 +13,26 @@ MEETING_TYPES = [
         "name": "Planning",
         "url": "https://www.stmewanparishcouncil.gov.uk/Planning_24621.aspx",
         "base_url": "https://www.stmewanparishcouncil.gov.uk"
+    },
+    {
+        "name": "Extra Ordinary Council",
+        "url": "https://www.stmewanparishcouncil.gov.uk/Extra_Ordinary_Council_Meeting_30589.aspx",
+        "base_url": "https://www.stmewanparishcouncil.gov.uk"
+    },
+    {
+        "name": "Finance, Staffing, General Purposes & Audit",
+        "url": "https://www.stmewanparishcouncil.gov.uk/Finance_Staffing_General_Purposes__and__Audit_24623.aspx",
+        "base_url": "https://www.stmewanparishcouncil.gov.uk"
+    },
+    {
+        "name": "Playing Fields",
+        "url": "https://www.stmewanparishcouncil.gov.uk/Playing_Fields_24624.aspx",
+        "base_url": "https://www.stmewanparishcouncil.gov.uk"
+    },
+    {
+        "name": "Rights of Way",
+        "url": "https://www.stmewanparishcouncil.gov.uk/Rights_of_Way_24622.aspx",
+        "base_url": "https://www.stmewanparishcouncil.gov.uk"
     }
 ]
 
