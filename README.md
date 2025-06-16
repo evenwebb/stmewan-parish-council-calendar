@@ -24,6 +24,18 @@ python generate_ics.py
 
 The script downloads the meeting pages, extracts upcoming dates and associated links (agenda and minutes when available) and writes them into `stmewan.ics`.
 
+## How it works
+
+The `generate_ics.py` script contains a list of meeting pages under `MEETING_TYPES`.
+For each page it:
+
+1. Fetches the HTML with `requests`.
+2. Parses upcoming meeting entries using **BeautifulSoup**.
+3. Converts the textual dates and times into Python `datetime` objects.
+4. Creates an iCalendar event for each meeting, appending any agenda or minutes
+   links to the event description.
+5. Writes all events to `stmewan.ics` in standard iCalendar format.
+
 ## Calendar file
 
 An example `stmewan.ics` is included in this repository. After running the script you can import the file into your preferred calendar application to view upcoming Parish Council meetings.
