@@ -1,4 +1,4 @@
-# Parish Council Calendar
+# St Mewan Parish Council Calendar Scraper
 
 This repository contains a Python script that scrapes upcoming meeting dates from the St Mewan Parish Council website and builds an iCalendar (`.ics`) file. The generated calendar can be imported into any calendar application that supports the iCalendar format.
 
