@@ -5,12 +5,6 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-DTSTART;TZID=Europe/London:20250709T190000
-DTEND;TZID=Europe/London:20250709T210000
-SUMMARY:St Mewan Parish - Full Council Meeting
-DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/198497-July_25_Agenda.pdf
-END:VEVENT
-BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20250910T190000
 DTEND;TZID=Europe/London:20250910T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
@@ -33,11 +27,5 @@ DTSTART;TZID=Europe/London:20251210T190000
 DTEND;TZID=Europe/London:20251210T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
 DESCRIPTION:
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=Europe/London:20250709T182500
-DTEND;TZID=Europe/London:20250709T185500
-SUMMARY:St Mewan Parish - Planning Meeting
-DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/198507-Planning_Agenda_9th_July_2025.pdf
 END:VEVENT
 END:VCALENDAR
