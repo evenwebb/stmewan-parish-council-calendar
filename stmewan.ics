@@ -28,4 +28,16 @@ DTEND;TZID=Europe/London:20251210T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
 DESCRIPTION:
 END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=Europe/London:20250723T115000
+DTEND;TZID=Europe/London:20250723T125000
+SUMMARY:St Mewan Parish - Planning Meeting
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/199538-Planning_Agenda_23rd_July_2025.pdf
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=Europe/London:20250723T111000
+DTEND;TZID=Europe/London:20250723T121000
+SUMMARY:St Mewan Parish - Finance, Staffing, General Purposes & Audit Meeting
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/190931-23rd_July_25_Finance_Agenda.pdf
+END:VEVENT
 END:VCALENDAR
