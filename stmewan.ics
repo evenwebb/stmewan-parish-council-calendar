@@ -8,7 +8,7 @@ BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20251008T190000
 DTEND;TZID=Europe/London:20251008T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
-DESCRIPTION:
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/198499-October_25_Agenda.pdf
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20251112T190000
@@ -21,5 +21,11 @@ DTSTART;TZID=Europe/London:20251210T190000
 DTEND;TZID=Europe/London:20251210T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
 DESCRIPTION:
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=Europe/London:20251008T182500
+DTEND;TZID=Europe/London:20251008T185500
+SUMMARY:St Mewan Parish - Planning Meeting
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/200733-Planning_Agenda_8th_October__2025.pdf
 END:VEVENT
 END:VCALENDAR
