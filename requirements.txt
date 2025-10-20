@@ -1,2 +1,4 @@
-beautifulsoup4
-requests
+# Web scraping and HTTP dependencies
+# Versions pinned to ensure reproducible builds
+beautifulsoup4==4.12.3
+requests==2.31.0
