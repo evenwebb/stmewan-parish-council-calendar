@@ -14,12 +14,12 @@ BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20251210T111500
 DTEND;TZID=Europe/London:20251210T114000
 SUMMARY:St Mewan Parish - Planning Meeting
-DESCRIPTION:
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/205184-Planning_Agenda_10th_December__2025.pdf
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20251210T114500
 DTEND;TZID=Europe/London:20251210T124500
 SUMMARY:St Mewan Parish - Finance, Staffing, General Purposes & Audit Meeting
-DESCRIPTION:
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/205183-10th_December_25_Finance_Agenda.pdf
 END:VEVENT
 END:VCALENDAR
