@@ -5,21 +5,33 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-DTSTART;TZID=Europe/London:20251210T190000
-DTEND;TZID=Europe/London:20251210T210000
+DTSTART;TZID=Europe/London:20260114T190000
+DTEND;TZID=Europe/London:20260114T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
 DESCRIPTION:
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=Europe/London:20251210T111500
-DTEND;TZID=Europe/London:20251210T114000
-SUMMARY:St Mewan Parish - Planning Meeting
-DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/205184-Planning_Agenda_10th_December__2025.pdf
+DTSTART;TZID=Europe/London:20260211T190000
+DTEND;TZID=Europe/London:20260211T210000
+SUMMARY:St Mewan Parish - Full Council Meeting
+DESCRIPTION:
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=Europe/London:20251210T114500
-DTEND;TZID=Europe/London:20251210T124500
-SUMMARY:St Mewan Parish - Finance, Staffing, General Purposes & Audit Meeting
-DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/205183-10th_December_25_Finance_Agenda.pdf
+DTSTART;TZID=Europe/London:20260304T190000
+DTEND;TZID=Europe/London:20260304T210000
+SUMMARY:St Mewan Parish - Full Council Meeting
+DESCRIPTION:
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=Europe/London:20260408T180000
+DTEND;TZID=Europe/London:20260408T185500
+SUMMARY:St Mewan Parish - Full Council Meeting
+DESCRIPTION:
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=Europe/London:20260408T190000
+DTEND;TZID=Europe/London:20260408T210000
+SUMMARY:St Mewan Parish - Full Council Meeting
+DESCRIPTION:
 END:VEVENT
 END:VCALENDAR
