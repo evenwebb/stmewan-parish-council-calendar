@@ -27,7 +27,7 @@ The script downloads the meeting pages, extracts upcoming dates and associated l
 ## How it works
 
 The `generate_ics.py` script contains a list of meeting pages under `MEETING_TYPES`.
-For each page it:
+For each page, it:
 
 1. Fetches the HTML with `requests`.
 2. Parses upcoming meeting entries using **BeautifulSoup**.
