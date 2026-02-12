@@ -5,12 +5,6 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-DTSTART;TZID=Europe/London:20260211T190000
-DTEND;TZID=Europe/London:20260211T210000
-SUMMARY:St Mewan Parish - Full Council Meeting
-DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/198503-Feb_26__Agenda.pdf
-END:VEVENT
-BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20260304T190000
 DTEND;TZID=Europe/London:20260304T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
