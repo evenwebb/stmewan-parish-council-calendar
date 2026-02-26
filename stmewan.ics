@@ -8,7 +8,7 @@ BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20260304T190000
 DTEND;TZID=Europe/London:20260304T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
-DESCRIPTION:
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/198504-4th_March_26__Agenda.pdf
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=Europe/London:20260408T180000
