@@ -5,26 +5,63 @@ on:
     - cron: '0 11 * * *'    # Every day at 11:00 UTC (change as desired)
   workflow_dispatch:        # Allows you to trigger manually from GitHub UI
 
+concurrency:
+  group: stmewan-scrape-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  issues: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      CREATE_FAILURE_ISSUE: ${{ secrets.CREATE_FAILURE_ISSUE }}
+      SCRAPER_RUN_ATTEMPTS: ${{ secrets.SCRAPER_RUN_ATTEMPTS }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
 
-      - name: Generate iCal
+      - name: Generate iCal (with retries)
         run: |
-          echo "Generating iCal file..."
-          python generate_ics.py
-          echo "iCal generation complete"
+          ATTEMPTS="${SCRAPER_RUN_ATTEMPTS:-2}"
+          if [ "$ATTEMPTS" -lt 1 ]; then
+            ATTEMPTS=1
+          fi
+
+          attempt=1
+          while [ "$attempt" -le "$ATTEMPTS" ]; do
+            echo "Scraper attempt $attempt/$ATTEMPTS"
+            if python generate_ics.py; then
+              echo "Scraper completed successfully"
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$ATTEMPTS" ]; then
+              sleep_seconds=$((attempt * 20))
+              echo "Attempt $attempt failed; retrying in ${sleep_seconds}s..."
+              sleep "$sleep_seconds"
+            fi
+            attempt=$((attempt + 1))
+          done
+
+          echo "All scraper attempts failed"
+          exit 1
 
       - name: Validate output
         run: |
@@ -38,7 +75,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add *.ics
+          if [ -f stmewan.ics ]; then
+            git add stmewan.ics
+          fi
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -46,3 +85,49 @@ jobs:
             git push
             echo "Changes committed and pushed successfully"
           fi
+      - name: Create or update failure issue
+        if: failure() && env.CREATE_FAILURE_ISSUE == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = "St Mewan scraper failure";
+            const labels = ["automation", "scraper-failure"];
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The scheduled/manual St Mewan scraper workflow failed after configured retries.",
+              "",
+              `- Workflow: ${context.workflow}`,
+              `- Job: ${context.job}`,
+              `- Run: ${runUrl}`,
+              `- Commit: ${context.sha}`,
+              "",
+              "Please review the run logs and fix the scraping/configuration issue."
+            ].join("\\n");
+
+            const existing = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              labels: labels.join(","),
+              per_page: 100
+            });
+
+            const issue = existing.data.find((item) => item.title === title);
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels
+              });
+            }

@@ -9,7 +9,9 @@ calendar applications.
 import re
 import sys
 import logging
-from datetime import date, datetime, timedelta
+import hashlib
+import time
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Tuple, List, Dict
 import requests
 from bs4 import BeautifulSoup
@@ -19,8 +21,13 @@ BASE_URL = "https://www.stmewanparishcouncil.gov.uk"
 OUTPUT_FILE = "stmewan.ics"
 TIMEZONE = "Europe/London"
 REQUEST_TIMEOUT = 20
+REQUEST_RETRIES = 3
+INITIAL_RETRY_DELAY = 1
+RETRY_MULTIPLIER = 2
 DEFAULT_MEETING_DURATION_HOURS = 1
 YEAR_THRESHOLD = 50  # For handling century rollovers in 2-digit years
+ICAL_LINE_LENGTH = 75
+ICAL_NEWLINE = "\r\n"
 
 MEETING_TYPES = [
     {
@@ -136,14 +143,40 @@ def make_ics_event(dtstart: datetime, dtend: datetime, summary: str, description
     Returns:
         Formatted VEVENT string for inclusion in an iCalendar file
     """
-    return (
-        "BEGIN:VEVENT\n"
-        f"DTSTART;TZID={TIMEZONE}:{dtstart.strftime('%Y%m%dT%H%M%S')}\n"
-        f"DTEND;TZID={TIMEZONE}:{dtend.strftime('%Y%m%dT%H%M%S')}\n"
-        f"SUMMARY:{summary}\n"
-        f"DESCRIPTION:{description}\n"
-        "END:VEVENT\n"
+    uid_seed = f"{dtstart.isoformat()}|{dtend.isoformat()}|{summary}|{description}"
+    uid = f"{hashlib.sha1(uid_seed.encode('utf-8')).hexdigest()}@stmewan-calendar"
+    dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    lines = [
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{dtstamp}",
+        f"DTSTART;TZID={TIMEZONE}:{dtstart.strftime('%Y%m%dT%H%M%S')}",
+        f"DTEND;TZID={TIMEZONE}:{dtend.strftime('%Y%m%dT%H%M%S')}",
+        _escape_and_fold_ical_text(summary, "SUMMARY:"),
+        _escape_and_fold_ical_text(description, "DESCRIPTION:"),
+        "END:VEVENT",
+        "",
+    ]
+    return ICAL_NEWLINE.join(lines)
+
+
+def _escape_and_fold_ical_text(text: str, prefix: str = "") -> str:
+    escaped = (
+        text.replace("\\", "\\\\")
+        .replace(";", r"\;")
+        .replace(",", r"\,")
+        .replace("\n", r"\n")
     )
+    full_line = prefix + escaped
+    if len(full_line) <= ICAL_LINE_LENGTH:
+        return full_line
+    chunks = [full_line[:ICAL_LINE_LENGTH]]
+    remaining = full_line[ICAL_LINE_LENGTH:]
+    while remaining:
+        chunks.append(" " + remaining[:ICAL_LINE_LENGTH - 1])
+        remaining = remaining[ICAL_LINE_LENGTH - 1:]
+    return ICAL_NEWLINE.join(chunks)
 
 def extract_events_from_html(html: str, meeting_type: str) -> List[str]:
     """
@@ -246,8 +279,7 @@ def fetch_meeting_events(meeting: Dict[str, str]) -> Tuple[List[str], bool]:
     """
     logging.info(f"Fetching {meeting['name']} page from {meeting['url']}")
     try:
-        response = requests.get(meeting["url"], timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
+        response = fetch_with_retries(meeting["url"])
     except requests.exceptions.Timeout:
         logging.error(f"Timeout fetching {meeting['name']} page after {REQUEST_TIMEOUT} seconds")
         return [], False
@@ -263,6 +295,22 @@ def fetch_meeting_events(meeting: Dict[str, str]) -> Tuple[List[str], bool]:
     return events, True
 
 
+def fetch_with_retries(url: str) -> requests.Response:
+    delay = INITIAL_RETRY_DELAY
+    for attempt in range(REQUEST_RETRIES):
+        try:
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            logging.warning("Attempt %d failed for %s: %s", attempt + 1, url, exc)
+            if attempt == REQUEST_RETRIES - 1:
+                raise
+            time.sleep(delay)
+            delay *= RETRY_MULTIPLIER
+    raise requests.RequestException("All retries exhausted")
+
+
 def generate_ical_content(events: List[str]) -> str:
     """
     Generate complete iCalendar file content from event strings.
@@ -274,14 +322,19 @@ def generate_ical_content(events: List[str]) -> str:
         Complete iCalendar file content
     """
     return (
-        "BEGIN:VCALENDAR\n"
-        "VERSION:2.0\n"
-        "PRODID:-//St Mewan Parish Council//EN\n"
-        "CALSCALE:GREGORIAN\n"
-        "METHOD:PUBLISH\n"
-        f"X-WR-TIMEZONE:{TIMEZONE}\n"
+        ICAL_NEWLINE.join(
+            [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//St Mewan Parish Council//EN",
+                "CALSCALE:GREGORIAN",
+                "METHOD:PUBLISH",
+                f"X-WR-TIMEZONE:{TIMEZONE}",
+            ]
+        )
+        + ICAL_NEWLINE
         + "".join(events)
-        + "END:VCALENDAR\n"
+        + f"END:VCALENDAR{ICAL_NEWLINE}"
     )
 
 

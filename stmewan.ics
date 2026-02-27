@@ -5,21 +5,38 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
+UID:0cd497c5c89d3c95de7f52ef54498db159f79404@stmewan-calendar
+DTSTAMP:20260227T095055Z
 DTSTART;TZID=Europe/London:20260304T190000
 DTEND;TZID=Europe/London:20260304T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
-DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Agendas/198504-4th_March_26__Agenda.pdf
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/File
+ s/_Agendas/198504-4th_March_26__Agenda.pdf
 END:VEVENT
 BEGIN:VEVENT
+UID:15576e2dda0faa8ab253409fcd19acf0105b79b3@stmewan-calendar
+DTSTAMP:20260227T095055Z
 DTSTART;TZID=Europe/London:20260408T180000
 DTEND;TZID=Europe/London:20260408T185500
 SUMMARY:St Mewan Parish - Full Council Meeting
 DESCRIPTION:
 END:VEVENT
 BEGIN:VEVENT
+UID:b407323c78c410bf1c20dc47b1af9db5dab8144b@stmewan-calendar
+DTSTAMP:20260227T095055Z
 DTSTART;TZID=Europe/London:20260408T190000
 DTEND;TZID=Europe/London:20260408T210000
 SUMMARY:St Mewan Parish - Full Council Meeting
 DESCRIPTION:
+END:VEVENT
+BEGIN:VEVENT
+UID:e2cac9aabf3f22c5d557df1b1c33dc4f6cecf57a@stmewan-calendar
+DTSTAMP:20260227T095056Z
+DTSTART;TZID=Europe/London:20260304T174500
+DTEND;TZID=Europe/London:20260304T184500
+SUMMARY:St Mewan Parish - Finance\, Staffing\, General Purposes & Audit Mee
+ ting
+DESCRIPTION:Agenda: https://www.stmewanparishcouncil.gov.uk/_UserFiles/File
+ s/_Agendas/205183-4th_March_26_Finance_Agenda.pdf
 END:VEVENT
 END:VCALENDAR
