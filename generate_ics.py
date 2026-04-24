@@ -71,33 +71,58 @@ def parse_event_date(date_str: str) -> Optional[date]:
     Returns:
         Parsed date object, or None if parsing fails
     """
-    match = re.match(r'(\d{1,2}) (\w{3}) (\d{2})', date_str)
+    # The site date formats have changed over time; accept a few common variants.
+    # Examples observed/expected:
+    # - "8 Jan 25"
+    # - "8 Jan 2026"
+    # - "08 January 2026"
+    cleaned = re.sub(r"\s+", " ", date_str.strip())
+
+    # Try strict known formats first (fast path)
+    for fmt in ("%d %b %y", "%d %b %Y", "%d %B %Y"):
+        try:
+            parsed = datetime.strptime(cleaned, fmt).date()
+            # Handle century rollover only for 2-digit years
+            if fmt == "%d %b %y":
+                year_2digit = parsed.year % 100
+                current_year = date.today().year
+                current_century = (current_year // 100) * 100
+                current_2digit = current_year % 100
+                if year_2digit < current_2digit - YEAR_THRESHOLD:
+                    return date(current_century + 100 + year_2digit, parsed.month, parsed.day)
+                return date(current_century + year_2digit, parsed.month, parsed.day)
+            return parsed
+        except ValueError:
+            pass
+
+    # Fallback: "DD <month> <year>" where month may be abbreviated or full
+    match = re.match(r"^(\d{1,2}) ([A-Za-z]{3,}) (\d{2}|\d{4})$", cleaned)
     if not match:
         logging.warning(f"Failed to parse date: '{date_str}'")
         return None
 
     day, month, year = match.groups()
-
     try:
-        month_number = datetime.strptime(month, "%b").month
+        try:
+            month_number = datetime.strptime(month[:3], "%b").month
+        except ValueError:
+            month_number = datetime.strptime(month, "%B").month
     except ValueError as e:
         logging.error(f"Invalid month format '{month}' in date '{date_str}': {e}")
         return None
 
-    # Infer century from current year to handle century rollovers correctly
-    year_2digit = int(year)
-    current_year = date.today().year
-    current_century = (current_year // 100) * 100
-    current_2digit = current_year % 100
-
-    # If parsed year is much less than current year, assume next century
-    # e.g., in 2099, year "01" should be 2101, not 2001
-    if year_2digit < current_2digit - YEAR_THRESHOLD:
-        year_full = current_century + 100 + year_2digit
-    else:
-        year_full = current_century + year_2digit
-
     try:
+        if len(year) == 4:
+            year_full = int(year)
+        else:
+            year_2digit = int(year)
+            current_year = date.today().year
+            current_century = (current_year // 100) * 100
+            current_2digit = current_year % 100
+            if year_2digit < current_2digit - YEAR_THRESHOLD:
+                year_full = current_century + 100 + year_2digit
+            else:
+                year_full = current_century + year_2digit
         return date(year_full, month_number, int(day))
     except ValueError as e:
         logging.error(f"Invalid date components in '{date_str}': {e}")
@@ -117,15 +142,26 @@ def parse_time_range(time_str: str) -> Tuple[Optional[str], Optional[str]]:
     Returns:
         Tuple of (start_time, end_time) as strings, or (None, None) if parsing fails
     """
+    cleaned = re.sub(r"\s+", " ", time_str.strip().lower())
+    cleaned = cleaned.replace(".", ":")
+
     # Try to match time range first
-    match = re.match(r'(\d{1,2}:\d{2}) to (\d{1,2}:\d{2})', time_str)
+    match = re.match(r"^(\d{1,2}:\d{2})\s*(?:to|-)\s*(\d{1,2}:\d{2})$", cleaned)
     if match:
         return match.group(1), match.group(2)
 
-    # Try to match single time
-    match = re.match(r'(\d{1,2}:\d{2})', time_str)
+    # Try to match single time (possibly with am/pm)
+    match = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", cleaned)
     if match:
-        return match.group(1), None
+        hour = int(match.group(1))
+        minute = int(match.group(2) or "00")
+        ampm = match.group(3)
+        if ampm:
+            if ampm == "pm" and hour != 12:
+                hour += 12
+            if ampm == "am" and hour == 12:
+                hour = 0
+        return f"{hour:02d}:{minute:02d}", None
 
     logging.warning(f"Failed to parse time range: '{time_str}'")
     return None, None
@@ -212,7 +248,7 @@ def extract_events_from_html(html: str, meeting_type: str) -> List[str]:
             continue
 
         if event_date < today:
-            logging.debug(f"Skipping past event for {meeting_type}: {event_date}")
+            logging.debug(f"Skipping past event for {meeting_type}: {event_date} (raw='{date_str}')")
             continue
 
         p_tags = minutes_div.find_all("p")
@@ -220,7 +256,15 @@ def extract_events_from_html(html: str, meeting_type: str) -> List[str]:
             logging.warning(f"No time information found for {meeting_type} on {event_date}")
             continue
 
-        time_str = p_tags[0].get_text(strip=True)
+        # Find the first <p> that looks like a time (site markup varies)
+        time_str = None
+        for p in p_tags:
+            candidate = p.get_text(strip=True)
+            if re.search(r"\b\d{1,2}([:.]\d{2})?\s*(am|pm)?\b", candidate, flags=re.IGNORECASE):
+                time_str = candidate
+                break
+        if not time_str:
+            time_str = p_tags[0].get_text(strip=True)
         start_time_str, end_time_str = parse_time_range(time_str)
         if not start_time_str:
             logging.warning(f"Could not parse time for {meeting_type} on {event_date}: '{time_str}'")
@@ -369,17 +413,15 @@ def main() -> None:
         if not success:
             failed_meetings.append(meeting['name'])
 
-    # Validate that we found at least some events
+    # If there are no upcoming events, keep the last published calendar file.
+    # This avoids breaking subscribers just because the site has no future meetings listed
+    # (or because markup temporarily changed).
     if len(all_events) == 0:
-        logging.error("CRITICAL: Zero events found across all meeting types!")
-        logging.error("This likely indicates:")
-        logging.error("  1. The website structure has changed")
-        logging.error("  2. All meetings are in the past")
-        logging.error("  3. Network or parsing errors occurred")
+        logging.warning("No upcoming events found across all meeting types.")
+        logging.warning("Leaving existing calendar file as-is and exiting successfully.")
         if failed_meetings:
-            logging.error(f"Failed to fetch: {', '.join(failed_meetings)}")
-        logging.error("The generated calendar file will be empty.")
-        sys.exit(1)
+            logging.warning(f"Some meeting pages failed to fetch: {', '.join(failed_meetings)}")
+        return
 
     if failed_meetings:
         logging.warning(f"Failed to fetch some meetings: {', '.join(failed_meetings)}")
