@@ -6,6 +6,7 @@ website and generates an iCalendar (.ics) file that can be imported into
 calendar applications.
 """
 
+import os
 import re
 import sys
 import logging
@@ -13,15 +14,19 @@ import hashlib
 import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Tuple, List, Dict
+from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
 # Constants
 BASE_URL = "https://www.stmewanparishcouncil.gov.uk"
+OUTPUT_DIR = "docs"
 OUTPUT_FILE = "stmewan.ics"
+SITE_URL = "https://evenwebb.github.io/stmewan-parish-council-calendar"
 TIMEZONE = "Europe/London"
 REQUEST_TIMEOUT = 20
 REQUEST_RETRIES = 3
+USER_AGENT = "StMewanCalendarScraper/1.0 (calendar automation; +https://github.com/evenwebb/stmewan-parish-council-calendar)"
 INITIAL_RETRY_DELAY = 1
 RETRY_MULTIPLIER = 2
 DEFAULT_MEETING_DURATION_HOURS = 1
@@ -29,7 +34,42 @@ YEAR_THRESHOLD = 50  # For handling century rollovers in 2-digit years
 ICAL_LINE_LENGTH = 75
 ICAL_NEWLINE = "\r\n"
 
-MEETING_TYPES = [
+def discover_meeting_pages() -> List[Dict[str, str]]:
+    """Scrape the council homepage to discover meeting type pages dynamically (#19).
+    Falls back to hardcoded list if discovery fails."""
+    try:
+        resp = requests.get(
+            f"{BASE_URL}/Council_Meetings_27398.aspx",
+            timeout=REQUEST_TIMEOUT,
+            headers={"User-Agent": USER_AGENT},
+        )
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        discovered = []
+        seen_names = set()
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            text = link.get_text(strip=True)
+            if not text or len(text) < 3:
+                continue
+            # Look for links to meeting type ASPX pages
+            if ".aspx" in href.lower() and any(
+                kw in text.lower() for kw in ("council", "planning", "committee", "meeting", "finance", "playing", "rights")
+            ):
+                full_url = href if href.startswith("http") else BASE_URL + href
+                if text not in seen_names:
+                    seen_names.add(text)
+                    discovered.append({"name": text, "url": full_url})
+        if discovered:
+            logging.info("Discovered %d meeting types from council page", len(discovered))
+            return discovered
+    except (requests.RequestException, Exception) as e:
+        logging.warning("Meeting page discovery failed: %s — using hardcoded list", e)
+    # Fallback to hardcoded list
+    return HARDCODED_MEETING_TYPES
+
+
+HARDCODED_MEETING_TYPES = [
     {
         "name": "Full Council",
         "url": f"{BASE_URL}/Full_Council_24620.aspx",
@@ -77,6 +117,7 @@ def parse_event_date(date_str: str) -> Optional[date]:
     # - "8 Jan 2026"
     # - "08 January 2026"
     cleaned = re.sub(r"\s+", " ", date_str.strip())
+    cleaned = re.sub(r"(\d+)(st|nd|rd|th)\b", r"\1", cleaned)  # Strip ordinals: "8th" → "8"
 
     # Try strict known formats first (fast path)
     for fmt in ("%d %b %y", "%d %b %Y", "%d %B %Y"):
@@ -90,6 +131,8 @@ def parse_event_date(date_str: str) -> Optional[date]:
                 current_2digit = current_year % 100
                 if year_2digit < current_2digit - YEAR_THRESHOLD:
                     return date(current_century + 100 + year_2digit, parsed.month, parsed.day)
+                if year_2digit > current_2digit + YEAR_THRESHOLD:
+                    return date(current_century - 100 + year_2digit, parsed.month, parsed.day)
                 return date(current_century + year_2digit, parsed.month, parsed.day)
             return parsed
         except ValueError:
@@ -191,6 +234,7 @@ def make_ics_event(dtstart: datetime, dtend: datetime, summary: str, description
         f"DTEND;TZID={TIMEZONE}:{dtend.strftime('%Y%m%dT%H%M%S')}",
         _escape_and_fold_ical_text(summary, "SUMMARY:"),
         _escape_and_fold_ical_text(description, "DESCRIPTION:"),
+        "SEQUENCE:0",
         "END:VEVENT",
         "",
     ]
@@ -280,11 +324,12 @@ def extract_events_from_html(html: str, meeting_type: str) -> List[str]:
             if not link_url:
                 continue
             if not link_url.startswith("http"):
-                link_url = BASE_URL + link_url
+                link_url = urljoin(BASE_URL, link_url)
+            doc_title = link_text.strip()
             if "Agenda" in link_text:
-                description += f"Agenda: {link_url}\n"
+                description += f"Agenda ({doc_title}): {link_url}\n"
             if "Minutes" in link_text:
-                description += f"Minutes: {link_url}\n"
+                description += f"Minutes ({doc_title}): {link_url}\n"
 
         # Parse start datetime
         try:
@@ -343,7 +388,7 @@ def fetch_with_retries(url: str) -> requests.Response:
     delay = INITIAL_RETRY_DELAY
     for attempt in range(REQUEST_RETRIES):
         try:
-            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+            response = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": USER_AGENT})
             response.raise_for_status()
             return response
         except requests.RequestException as exc:
@@ -352,7 +397,7 @@ def fetch_with_retries(url: str) -> requests.Response:
                 raise
             time.sleep(delay)
             delay *= RETRY_MULTIPLIER
-    raise requests.RequestException("All retries exhausted")
+    raise requests.RequestException("All retries exhausted")  # safety net for retries=0
 
 
 def generate_ical_content(events: List[str]) -> str:
@@ -374,6 +419,8 @@ def generate_ical_content(events: List[str]) -> str:
                 "CALSCALE:GREGORIAN",
                 "METHOD:PUBLISH",
                 f"X-WR-TIMEZONE:{TIMEZONE}",
+                "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
+                "X-PUBLISHED-TTL:PT12H",
             ]
         )
         + ICAL_NEWLINE
@@ -406,8 +453,9 @@ def main() -> None:
     all_events = []
     failed_meetings = []
 
-    # Fetch events from all meeting types
-    for meeting in MEETING_TYPES:
+    # Fetch events from all meeting types (discovered dynamically, fallback to hardcoded)
+    meeting_types = discover_meeting_pages()
+    for meeting in meeting_types:
         events, success = fetch_meeting_events(meeting)
         all_events.extend(events)
         if not success:
@@ -429,15 +477,150 @@ def main() -> None:
 
     logging.info(f"Total events collected: {len(all_events)}")
 
+    # Ensure output directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
     # Generate and write calendar file
     ical_content = generate_ical_content(all_events)
+    ics_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
     try:
-        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        tmp = ics_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             f.write(ical_content)
-        logging.info(f"Successfully created {OUTPUT_FILE} with {len(all_events)} upcoming meetings")
+        os.replace(tmp, ics_path)
+        logging.info(f"Successfully created {ics_path} with {len(all_events)} upcoming meetings")
     except IOError as e:
         logging.error(f"Failed to write calendar file: {e}")
         sys.exit(1)
+
+    # Generate HTML landing page
+    try:
+        html = _build_index_html(len(all_events), meeting_types)
+        html_path = os.path.join(OUTPUT_DIR, "index.html")
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        logging.info(f"Created {html_path}")
+    except Exception as e:
+        logging.warning(f"HTML generation failed (non-fatal): {e}")
+
+
+def _build_index_html(event_count: int, meeting_types: list) -> str:
+    now = datetime.now().strftime("%d %B %Y at %H:%M")
+    ics_url = f"{SITE_URL}/{OUTPUT_FILE}"
+    webcal_url = ics_url.replace("https://", "webcal://")
+    gcal_url = f"https://calendar.google.com/calendar/render?cid={webcal_url}"
+
+    meeting_list = ""
+    for mt in meeting_types[:15]:
+        meeting_list += f"<li>{mt['name']}</li>\n"
+
+    return f"""<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mewan Parish Council — Meeting Calendar</title>
+    <meta name="description" content="Subscribe to the St Mewan Parish Council meeting calendar. Stay informed about Full Council, Planning, Finance, and committee meetings.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root{{--bg:#0a0a12;--surface:#12121e;--surface2:#1a1a2c;--border:rgba(139,157,181,0.18);--text:#e4e8f0;--muted:#8b9db5;--accent:#818cf8;--accent-dim:rgba(129,140,248,0.12);--green:#4ade80;--amber:#fbbf24;--radius:14px;--radius-sm:8px}}
+        [data-theme="light"]{{--bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;--border:rgba(100,116,139,0.15);--text:#1e293b;--muted:#64748b;--accent:#4f46e5;--accent-dim:rgba(79,70,229,0.1);--green:#16a34a;--amber:#d97706}}
+        *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+        body{{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;transition:background .2s,color .2s}}
+        .container{{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}}
+        .header{{text-align:center;padding:3rem 0 2.5rem}}
+        .header h1{{font-size:2.2rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.5rem}}
+        .header .badge{{display:inline-block;font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);padding:0.3rem 0.85rem;border-radius:100px;margin-bottom:1rem}}
+        .header p{{color:var(--muted);font-size:1.05rem;max-width:500px;margin:0 auto}}
+        .theme-toggle{{position:fixed;top:1rem;right:1rem;background:var(--surface);border:1px solid var(--border);color:var(--text);cursor:pointer;padding:0.45rem 0.8rem;border-radius:8px;font-size:0.85rem;transition:background .15s;z-index:10}}
+        .theme-toggle:hover{{background:var(--surface2)}}
+
+        .subscribe-card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}}
+        .subscribe-card h2{{font-size:1.3rem;margin-bottom:1.25rem}}
+        .sub-buttons{{display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;margin-bottom:1.5rem}}
+        .sub-btn{{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.4rem;border-radius:100px;font-weight:600;font-size:0.9rem;text-decoration:none;transition:all .15s;border:1px solid var(--border);background:var(--surface2);color:var(--text)}}
+        .sub-btn:hover{{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.25);border-color:var(--accent)}}
+        .sub-btn.primary{{background:var(--accent);color:#fff;border-color:var(--accent)}}
+        .sub-url{{font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--muted);word-break:break-all;background:var(--surface2);padding:0.6rem 1rem;border-radius:var(--radius-sm);margin-top:1rem}}
+
+        .instructions{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;margin-bottom:2.5rem}}
+        .inst-card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem}}
+        .inst-card h3{{font-size:1rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem}}
+        .inst-card p,.inst-card ol{{font-size:0.88rem;color:var(--muted);line-height:1.7}}
+        .inst-card ol{{padding-left:1.25rem}}
+        .inst-card li{{margin-bottom:0.3rem}}
+
+        .meetings-card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:2rem}}
+        .meetings-card h2{{font-size:1.2rem;margin-bottom:1rem}}
+        .meeting-types{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem}}
+        .meeting-type{{background:var(--surface2);padding:0.8rem 1rem;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:0.9rem;font-weight:500}}
+        .stat-badge{{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;color:var(--green);background:rgba(74,222,128,0.12);padding:0.3rem 0.75rem;border-radius:100px;margin:1rem 0}}
+
+        footer{{text-align:center;padding:2rem 0;color:var(--muted);font-size:0.85rem;border-top:1px solid var(--border);margin-top:2rem}}
+        footer a{{color:var(--accent)}}
+        @media(max-width:600px){{.header h1{{font-size:1.6rem}}.container{{padding:1rem}}.sub-buttons{{flex-direction:column}}.sub-btn{{justify-content:center}}}}
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">☀️ 🌙</button>
+    <div class="container">
+        <div class="header">
+            <div class="badge">Cornwall · Local Government</div>
+            <h1>St Mewan Parish<br>Council Meetings</h1>
+            <p>Subscribe to stay informed about upcoming parish council meetings. Calendar includes Full Council, Planning, Finance, and committee meetings with agenda and minutes links.</p>
+        </div>
+
+        <div class="subscribe-card">
+            <h2>📅 Subscribe to the Calendar</h2>
+            <div class="sub-buttons">
+                <a href="{webcal_url}" class="sub-btn primary">📱 Add to Apple / iOS</a>
+                <a href="{gcal_url}" class="sub-btn" target="_blank" rel="noopener">🔗 Add to Google Calendar</a>
+                <a href="{OUTPUT_FILE}" class="sub-btn" download>💾 Download .ics File</a>
+            </div>
+            <div class="sub-url">{ics_url}</div>
+        </div>
+
+        <div class="instructions">
+            <div class="inst-card">
+                <h3>📱 iPhone / iPad</h3>
+                <ol><li>Tap <strong>Add to Apple / iOS</strong> above</li><li>Tap <strong>Subscribe</strong> when prompted</li><li>The calendar appears in your Calendar app</li></ol>
+            </div>
+            <div class="inst-card">
+                <h3>🔗 Google Calendar</h3>
+                <ol><li>Tap <strong>Add to Google Calendar</strong> above</li><li>Sign in if needed</li><li>Confirm to add the calendar</li></ol>
+            </div>
+            <div class="inst-card">
+                <h3>💻 Outlook / Desktop</h3>
+                <ol><li>Click <strong>Download .ics File</strong> above</li><li>Open the downloaded file</li><li>Your calendar app will import it</li></ol>
+            </div>
+            <div class="inst-card">
+                <h3>🔄 Auto-Updates</h3>
+                <p>This calendar checks for new meetings every 24 hours. Subscribe via Apple or Google above for automatic updates — no manual re-downloading needed.</p>
+            </div>
+        </div>
+
+        <div class="meetings-card">
+            <h2>📋 Meeting Types Tracked</h2>
+            <div class="stat-badge">📌 {event_count} upcoming meeting{'s' if event_count != 1 else ''} in the calendar</div>
+            <div class="meeting-types">
+                {meeting_list or '<div class="meeting-type">Meeting types will appear after the first successful scrape</div>'}
+            </div>
+        </div>
+
+        <footer>
+            <p>St Mewan Parish Council Meeting Calendar · Updated {now}</p>
+            <p style="margin-top:0.5rem">An open-source community project. <a href="https://github.com/evenwebb/stmewan-parish-council-calendar">Source on GitHub</a> · <a href="{BASE_URL}">Council Website</a></p>
+        </footer>
+    </div>
+    <script>
+    (function(){{var t=localStorage.getItem('stmewan-theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}})();
+    function toggleTheme(){{var c=document.documentElement.getAttribute('data-theme');var n=c==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('stmewan-theme',n)}}
+    </script>
+</body>
+</html>"""
+
 
 if __name__ == "__main__":
     main()

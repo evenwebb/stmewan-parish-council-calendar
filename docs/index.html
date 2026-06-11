@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St Mewan Parish Council — Meeting Calendar</title>
+    <meta name="description" content="Subscribe to the St Mewan Parish Council meeting calendar. Stay informed about Full Council, Planning, Finance, and committee meetings.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#0a0a12;--surface:#12121e;--surface2:#1a1a2c;--border:rgba(139,157,181,0.18);--text:#e4e8f0;--muted:#8b9db5;--accent:#818cf8;--accent-dim:rgba(129,140,248,0.12);--green:#4ade80;--amber:#fbbf24;--radius:14px;--radius-sm:8px}
+        [data-theme="light"]{--bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;--border:rgba(100,116,139,0.15);--text:#1e293b;--muted:#64748b;--accent:#4f46e5;--accent-dim:rgba(79,70,229,0.1);--green:#16a34a;--amber:#d97706}
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;transition:background .2s,color .2s}
+        .container{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
+        .header{text-align:center;padding:3rem 0 2.5rem}
+        .header h1{font-size:2.2rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.5rem}
+        .header .badge{display:inline-block;font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);padding:0.3rem 0.85rem;border-radius:100px;margin-bottom:1rem}
+        .header p{color:var(--muted);font-size:1.05rem;max-width:500px;margin:0 auto}
+        .theme-toggle{position:fixed;top:1rem;right:1rem;background:var(--surface);border:1px solid var(--border);color:var(--text);cursor:pointer;padding:0.45rem 0.8rem;border-radius:8px;font-size:0.85rem;transition:background .15s;z-index:10}
+        .theme-toggle:hover{background:var(--surface2)}
+
+        .subscribe-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+        .subscribe-card h2{font-size:1.3rem;margin-bottom:1.25rem}
+        .sub-buttons{display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;margin-bottom:1.5rem}
+        .sub-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.4rem;border-radius:100px;font-weight:600;font-size:0.9rem;text-decoration:none;transition:all .15s;border:1px solid var(--border);background:var(--surface2);color:var(--text)}
+        .sub-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.25);border-color:var(--accent)}
+        .sub-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+        .sub-url{font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--muted);word-break:break-all;background:var(--surface2);padding:0.6rem 1rem;border-radius:var(--radius-sm);margin-top:1rem}
+
+        .instructions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;margin-bottom:2.5rem}
+        .inst-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem}
+        .inst-card h3{font-size:1rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem}
+        .inst-card p,.inst-card ol{font-size:0.88rem;color:var(--muted);line-height:1.7}
+        .inst-card ol{padding-left:1.25rem}
+        .inst-card li{margin-bottom:0.3rem}
+
+        .meetings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:2rem}
+        .meetings-card h2{font-size:1.2rem;margin-bottom:1rem}
+        .meeting-types{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem}
+        .meeting-type{background:var(--surface2);padding:0.8rem 1rem;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:0.9rem;font-weight:500}
+        .stat-badge{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;color:var(--green);background:rgba(74,222,128,0.12);padding:0.3rem 0.75rem;border-radius:100px;margin:1rem 0}
+
+        footer{text-align:center;padding:2rem 0;color:var(--muted);font-size:0.85rem;border-top:1px solid var(--border);margin-top:2rem}
+        footer a{color:var(--accent)}
+        @media(max-width:600px){.header h1{font-size:1.6rem}.container{padding:1rem}.sub-buttons{flex-direction:column}.sub-btn{justify-content:center}}
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">☀️ 🌙</button>
+    <div class="container">
+        <div class="header">
+            <div class="badge">Cornwall · Local Government</div>
+            <h1>St Mewan Parish<br>Council Meetings</h1>
+            <p>Subscribe to stay informed about upcoming parish council meetings. Calendar includes Full Council, Planning, Finance, and committee meetings with agenda and minutes links.</p>
+        </div>
+
+        <div class="subscribe-card">
+            <h2>📅 Subscribe to the Calendar</h2>
+            <div class="sub-buttons">
+                <a href="webcal://evenwebb.github.io/stmewan-parish-council-calendar/stmewan.ics" class="sub-btn primary">📱 Add to Apple / iOS</a>
+                <a href="https://calendar.google.com/calendar/render?cid=webcal://evenwebb.github.io/stmewan-parish-council-calendar/stmewan.ics" class="sub-btn" target="_blank" rel="noopener">🔗 Add to Google Calendar</a>
+                <a href="stmewan.ics" class="sub-btn" download>💾 Download .ics File</a>
+            </div>
+            <div class="sub-url">https://evenwebb.github.io/stmewan-parish-council-calendar/stmewan.ics</div>
+        </div>
+
+        <div class="instructions">
+            <div class="inst-card">
+                <h3>📱 iPhone / iPad</h3>
+                <ol><li>Tap <strong>Add to Apple / iOS</strong> above</li><li>Tap <strong>Subscribe</strong> when prompted</li><li>The calendar appears in your Calendar app</li></ol>
+            </div>
+            <div class="inst-card">
+                <h3>🔗 Google Calendar</h3>
+                <ol><li>Tap <strong>Add to Google Calendar</strong> above</li><li>Sign in if needed</li><li>Confirm to add the calendar</li></ol>
+            </div>
+            <div class="inst-card">
+                <h3>💻 Outlook / Desktop</h3>
+                <ol><li>Click <strong>Download .ics File</strong> above</li><li>Open the downloaded file</li><li>Your calendar app will import it</li></ol>
+            </div>
+            <div class="inst-card">
+                <h3>🔄 Auto-Updates</h3>
+                <p>This calendar checks for new meetings every 24 hours. Subscribe via Apple or Google above for automatic updates — no manual re-downloading needed.</p>
+            </div>
+        </div>
+
+        <div class="meetings-card">
+            <h2>📋 Meeting Types Tracked</h2>
+            <div class="stat-badge">📌 5 upcoming meetings in the calendar</div>
+            <div class="meeting-types">
+                <li>Full Council</li>
+<li>Planning</li>
+<li>Extra Ordinary Council</li>
+<li>Finance, Staffing, General Purposes & Audit</li>
+<li>Playing Fields</li>
+<li>Rights of Way</li>
+
+            </div>
+        </div>
+
+        <footer>
+            <p>St Mewan Parish Council Meeting Calendar · Updated 11 June 2026 at 22:37</p>
+            <p style="margin-top:0.5rem">An open-source community project. <a href="https://github.com/evenwebb/stmewan-parish-council-calendar">Source on GitHub</a> · <a href="https://www.stmewanparishcouncil.gov.uk">Council Website</a></p>
+        </footer>
+    </div>
+    <script>
+    (function(){var t=localStorage.getItem('stmewan-theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)})();
+    function toggleTheme(){var c=document.documentElement.getAttribute('data-theme');var n=c==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('stmewan-theme',n)}
+    </script>
+</body>
+</html>
