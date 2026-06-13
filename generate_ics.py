@@ -467,6 +467,7 @@ def main() -> None:
     if len(all_events) == 0:
         logging.warning("No upcoming events found across all meeting types.")
         logging.warning("Leaving existing calendar file as-is and exiting successfully.")
+        sys.exit(1)
         if failed_meetings:
             logging.warning(f"Some meeting pages failed to fetch: {', '.join(failed_meetings)}")
         return
