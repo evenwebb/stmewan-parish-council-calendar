@@ -39,7 +39,7 @@ def discover_meeting_pages() -> List[Dict[str, str]]:
     Falls back to hardcoded list if discovery fails."""
     try:
         resp = requests.get(
-            f"{BASE_URL}/Council_Meetings_27398.aspx",
+            BASE_URL,
             timeout=REQUEST_TIMEOUT,
             headers={"User-Agent": USER_AGENT},
         )
@@ -54,7 +54,7 @@ def discover_meeting_pages() -> List[Dict[str, str]]:
                 continue
             # Look for links to meeting type ASPX pages
             if ".aspx" in href.lower() and any(
-                kw in text.lower() for kw in ("council", "planning", "committee", "meeting", "finance", "playing", "rights")
+                kw in text.lower() for kw in ("full council", "planning", "rights of way", "finance, staffing", "playing fields", "polgooth playing fields", "extra ordinary")
             ):
                 full_url = href if href.startswith("http") else BASE_URL + href
                 if text not in seen_names:
@@ -93,7 +93,11 @@ HARDCODED_MEETING_TYPES = [
     {
         "name": "Rights of Way",
         "url": f"{BASE_URL}/Rights_of_Way_24622.aspx",
-    }
+    },
+    {
+        "name": "Polgooth Playing Fields Trust",
+        "url": f"{BASE_URL}/Polgooth_Playing_Fields_Trust_25013.aspx",
+    },
 ]
 
 def parse_event_date(date_str: str) -> Optional[date]:
@@ -314,10 +318,33 @@ def extract_events_from_html(html: str, meeting_type: str) -> List[str]:
             logging.warning(f"Could not parse time for {meeting_type} on {event_date}: '{time_str}'")
             continue
 
-        summary = f"St Mewan Parish - {meeting_type} Meeting"
+        # Extract meeting sub-type and venue from p tags
+        meeting_subtype = ""
+        venue = ""
+        for p in p_tags:
+            pt = p.get_text(strip=True)
+            # Skip time strings and standalone "Agenda"/"Minutes" labels
+            if re.search(r"\b\d{1,2}([:.]\d{2})?\s*(am|pm|to)?\b", pt, flags=re.IGNORECASE):
+                continue
+            if pt.lower() in ("agenda", "minutes", "agenda (pdf)", "minutes (pdf)"):
+                continue
+            if not meeting_subtype and any(
+                kw in pt.lower() for kw in ("ordinary", "annual", "extra", "parish", "assembly", "meeting")
+            ):
+                meeting_subtype = pt
+            elif not venue and not re.search(r"\d", pt):
+                venue = pt
+
+        # Build summary with subtype and venue
+        if meeting_subtype:
+            summary = f"St Mewan Parish - {meeting_subtype}"
+        else:
+            summary = f"St Mewan Parish - {meeting_type} Meeting"
 
         # Extract agenda and minutes links
         description = ""
+        if venue:
+            description += f"Location: {venue}\n"
         for a in minutes_div.find_all("a"):
             link_text = a.get_text()
             link_url = a.get("href")
