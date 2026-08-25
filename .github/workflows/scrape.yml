@@ -76,6 +76,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -f stmewan.ics ]; then git add stmewan.ics; fi
+          if [ -f index.html ]; then git add index.html; fi
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0

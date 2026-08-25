@@ -20,7 +20,7 @@ from bs4 import BeautifulSoup
 
 # Constants
 BASE_URL = "https://www.stmewanparishcouncil.gov.uk"
-OUTPUT_DIR = "docs"
+OUTPUT_DIR = ""
 OUTPUT_FILE = "stmewan.ics"
 SITE_URL = "https://evenwebb.github.io/stmewan-parish-council-calendar"
 TIMEZONE = "Europe/London"
@@ -34,8 +34,19 @@ YEAR_THRESHOLD = 50  # For handling century rollovers in 2-digit years
 ICAL_LINE_LENGTH = 75
 ICAL_NEWLINE = "\r\n"
 
+KNOWN_MEETING_NAMES = {
+    "full council",
+    "planning",
+    "rights of way",
+    "finance, staffing, general purposes & audit",
+    "playing fields",
+    "polgooth playing fields trust",
+    "extra ordinary council meeting",
+}
+
+
 def discover_meeting_pages() -> List[Dict[str, str]]:
-    """Scrape the council homepage to discover meeting type pages dynamically (#19).
+    """Scrape the council homepage to discover meeting type pages dynamically.
     Falls back to hardcoded list if discovery fails."""
     try:
         resp = requests.get(
@@ -49,21 +60,21 @@ def discover_meeting_pages() -> List[Dict[str, str]]:
         seen_names = set()
         for link in soup.find_all("a", href=True):
             href = link["href"]
-            text = link.get_text(strip=True)
+            text = re.sub(r"\s+", " ", link.get_text(" ", strip=True)).strip()
             if not text or len(text) < 3:
                 continue
-            # Look for links to meeting type ASPX pages
-            if ".aspx" in href.lower() and any(
-                kw in text.lower() for kw in ("full council", "planning", "rights of way", "finance, staffing", "playing fields", "polgooth playing fields", "extra ordinary")
-            ):
-                full_url = href if href.startswith("http") else BASE_URL + href
+            # Match only the council's standard meeting-type navigation links.
+            # Substring matching previously over-matched one-off pages such as
+            # "Planning Applications to be considered after despatch of Agenda".
+            if ".aspx" in href.lower() and text.lower() in KNOWN_MEETING_NAMES:
+                full_url = urljoin(BASE_URL, href)
                 if text not in seen_names:
                     seen_names.add(text)
                     discovered.append({"name": text, "url": full_url})
         if discovered:
             logging.info("Discovered %d meeting types from council page", len(discovered))
             return discovered
-    except (requests.RequestException, Exception) as e:
+    except Exception as e:
         logging.warning("Meeting page discovery failed: %s — using hardcoded list", e)
     # Fallback to hardcoded list
     return HARDCODED_MEETING_TYPES
@@ -192,23 +203,29 @@ def parse_time_range(time_str: str) -> Tuple[Optional[str], Optional[str]]:
     cleaned = re.sub(r"\s+", " ", time_str.strip().lower())
     cleaned = cleaned.replace(".", ":")
 
-    # Try to match time range first
-    match = re.match(r"^(\d{1,2}:\d{2})\s*(?:to|-)\s*(\d{1,2}:\d{2})$", cleaned)
+    # Time range, e.g. "19:00 to 21:00" (also accepts en/em-dash and hyphen).
+    match = re.match(r"^(\d{1,2}:\d{2})\s*(?:to|-|–|—)\s*(\d{1,2}:\d{2})(?!\d)", cleaned)
     if match:
         return match.group(1), match.group(2)
 
-    # Try to match single time (possibly with am/pm)
-    match = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$", cleaned)
+    # Single time with am/pm (e.g. "7:30pm", "7 pm").
+    match = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", cleaned)
     if match:
         hour = int(match.group(1))
         minute = int(match.group(2) or "00")
         ampm = match.group(3)
-        if ampm:
-            if ampm == "pm" and hour != 12:
-                hour += 12
-            if ampm == "am" and hour == 12:
-                hour = 0
+        if ampm == "pm" and hour != 12:
+            hour += 12
+        elif ampm == "am" and hour == 12:
+            hour = 0
         return f"{hour:02d}:{minute:02d}", None
+
+    # Single 24-hour time (e.g. "18:00"). The site's malformed nested <p> markup
+    # concatenates the title/links onto the same text node (e.g. "10:30Planning
+    # Meeting ...Agenda"), so match a leading time instead of the whole string.
+    match = re.match(r"^(\d{1,2}):(\d{2})(?!\d)", cleaned)
+    if match:
+        return f"{int(match.group(1)):02d}:{match.group(2)}", None
 
     logging.warning(f"Failed to parse time range: '{time_str}'")
     return None, None
@@ -493,11 +510,10 @@ def main() -> None:
     # (or because markup temporarily changed).
     if len(all_events) == 0:
         logging.warning("No upcoming events found across all meeting types.")
-        logging.warning("Leaving existing calendar file as-is and exiting successfully.")
-        sys.exit(1)
         if failed_meetings:
             logging.warning(f"Some meeting pages failed to fetch: {', '.join(failed_meetings)}")
-        return
+        logging.warning("Leaving the existing calendar file untouched and exiting with a non-zero status.")
+        sys.exit(1)
 
     if failed_meetings:
         logging.warning(f"Failed to fetch some meetings: {', '.join(failed_meetings)}")
@@ -505,8 +521,9 @@ def main() -> None:
 
     logging.info(f"Total events collected: {len(all_events)}")
 
-    # Ensure output directory exists
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Ensure output directory exists (OUTPUT_DIR may be empty for repo root)
+    if OUTPUT_DIR:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     # Generate and write calendar file
     ical_content = generate_ical_content(all_events)
