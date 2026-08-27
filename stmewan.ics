@@ -8,7 +8,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT12H
 X-PUBLISHED-TTL:PT12H
 BEGIN:VEVENT
 UID:5ea770c48410ac53b19e729bf0eef293a71fdb06@stmewan-calendar
-DTSTAMP:20260826T111909Z
+DTSTAMP:20260827T205052Z
 DTSTART;TZID=Europe/London:20260909T190000
 DTEND;TZID=Europe/London:20260909T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at Trewoon Village Hall\
@@ -18,7 +18,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:d518e40f9433951c6e4d564750d9e344198b5228@stmewan-calendar
-DTSTAMP:20260826T111909Z
+DTSTAMP:20260827T205052Z
 DTSTART;TZID=Europe/London:20261014T190000
 DTEND;TZID=Europe/London:20261014T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
@@ -28,7 +28,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:9e7c22f880234c7ee8211053ce7ca97bb7689523@stmewan-calendar
-DTSTAMP:20260826T111909Z
+DTSTAMP:20260827T205052Z
 DTSTART;TZID=Europe/London:20261111T190000
 DTEND;TZID=Europe/London:20261111T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
@@ -38,7 +38,7 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:34ecc87a8e8c995f75483b51c8b9ce8850161f1e@stmewan-calendar
-DTSTAMP:20260826T111909Z
+DTSTAMP:20260827T205052Z
 DTSTART;TZID=Europe/London:20261209T190000
 DTEND;TZID=Europe/London:20261209T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
@@ -47,14 +47,16 @@ DESCRIPTION:
 SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
-UID:b443b5aaa68e7109a2aa3146a376d6b34459b4b0@stmewan-calendar
-DTSTAMP:20260826T111909Z
+UID:4de689566ed9efa873c010bc0ecadf7c4ac04b72@stmewan-calendar
+DTSTAMP:20260827T205052Z
 DTSTART;TZID=Europe/London:20260827T103000
 DTEND;TZID=Europe/London:20260827T113000
 SUMMARY:St Mewan Parish - Planning Meeting at St Marks Church Hall\, Sticke
  r
 DESCRIPTION:Agenda (Agenda): https://www.stmewanparishcouncil.gov.uk/_UserF
- iles/Files/_Agendas/212283-Planning_Agenda_27th_August_2026.pdf
+ iles/Files/_Agendas/212283-Planning_Agenda_27th_August_2026.pdf\nMinutes (
+ Minutes): https://www.stmewanparishcouncil.gov.uk/_UserFiles/Files/_Minute
+ s/212951-WS_Draft_Planning_Minutes_27th_August_26.pdf
 SEQUENCE:0
 END:VEVENT
 END:VCALENDAR
