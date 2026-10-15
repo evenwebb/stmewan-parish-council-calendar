@@ -7,18 +7,19 @@ X-WR-TIMEZONE:Europe/London
 REFRESH-INTERVAL;VALUE=DURATION:PT12H
 X-PUBLISHED-TTL:PT12H
 BEGIN:VEVENT
-UID:a2f5520ae141724996da135cb0fc3fe58fea2950@stmewan-calendar
-DTSTAMP:20261014T153642Z
+UID:6841fedf65ad3cfa668b8f84a0d4982eb2960f49@stmewan-calendar
+DTSTAMP:20261015T152337Z
 DTSTART;TZID=Europe/London:20261021T190000
 DTEND;TZID=Europe/London:20261021T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
  , Sticker
-DESCRIPTION:
+DESCRIPTION:Agenda (Agenda): https://www.stmewanparishcouncil.gov.uk/_UserF
+ iles/Files/_Agendas/210465-WS_Agenda_21st_October__26.pdf
 SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:9e7c22f880234c7ee8211053ce7ca97bb7689523@stmewan-calendar
-DTSTAMP:20261014T153642Z
+DTSTAMP:20261015T152337Z
 DTSTART;TZID=Europe/London:20261111T190000
 DTEND;TZID=Europe/London:20261111T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
@@ -28,12 +29,23 @@ SEQUENCE:0
 END:VEVENT
 BEGIN:VEVENT
 UID:34ecc87a8e8c995f75483b51c8b9ce8850161f1e@stmewan-calendar
-DTSTAMP:20261014T153642Z
+DTSTAMP:20261015T152337Z
 DTSTART;TZID=Europe/London:20261209T190000
 DTEND;TZID=Europe/London:20261209T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
  , Sticker
 DESCRIPTION:
+SEQUENCE:0
+END:VEVENT
+BEGIN:VEVENT
+UID:ae11923dc80c5b8c69e8902b620634dc16b13a1d@stmewan-calendar
+DTSTAMP:20261015T152339Z
+DTSTART;TZID=Europe/London:20261021T180000
+DTEND;TZID=Europe/London:20261021T185000
+SUMMARY:St Mewan Parish - Finance\, Staffing\, General Purposes & Audit Mee
+ ting
+DESCRIPTION:Agenda (Agenda): https://www.stmewanparishcouncil.gov.uk/_UserF
+ iles/Files/_Agendas/3273-21st_October_26_Finance_Agenda.pdf
 SEQUENCE:0
 END:VEVENT
 END:VCALENDAR
