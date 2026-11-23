@@ -8,12 +8,23 @@ REFRESH-INTERVAL;VALUE=DURATION:PT12H
 X-PUBLISHED-TTL:PT12H
 BEGIN:VEVENT
 UID:34ecc87a8e8c995f75483b51c8b9ce8850161f1e@stmewan-calendar
-DTSTAMP:20261122T180744Z
+DTSTAMP:20261123T221809Z
 DTSTART;TZID=Europe/London:20261209T190000
 DTEND;TZID=Europe/London:20261209T210000
 SUMMARY:St Mewan Parish - Ordinary Council Meeting at St Marks Church Hall\
  , Sticker
 DESCRIPTION:
+SEQUENCE:0
+END:VEVENT
+BEGIN:VEVENT
+UID:8cf256cc905f40d1ba9365b45e8c35cf028deff1@stmewan-calendar
+DTSTAMP:20261123T221810Z
+DTSTART;TZID=Europe/London:20261130T194500
+DTEND;TZID=Europe/London:20261130T204500
+SUMMARY:St Mewan Parish - Planning Meeting at St Marks Church Hall\, Sticke
+ r
+DESCRIPTION:Agenda (Agenda): https://www.stmewanparishcouncil.gov.uk/_UserF
+ iles/Files/_Agendas/214520-Planning_Agenda_30th_November_2026.pdf
 SEQUENCE:0
 END:VEVENT
 END:VCALENDAR
